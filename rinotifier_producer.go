@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"log"
 	"time"
 )
 
@@ -18,18 +18,18 @@ func main() {
 		Region: aws.String("us-west-2"),
 	})
 	if err != nil {
-		fmt.Println("Could not create session, exiting", err)
+		log.Println("Could not create session, exiting", err)
 		return
 	}
 
 	_, err = sess.Config.Credentials.Get()
 	if err != nil {
-		fmt.Println("Could not get credentials, exiting", err)
+		log.Println("Could not get credentials, exiting", err)
 		return
 	}
 
-	// svc := ec2.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebugWithHTTPBody))
-	svc := ec2.New(sess)
+	svc := ec2.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebugWithHTTPBody))
+	///svc := ec2.New(sess)
 
 	sqs_svc := sqs.New(sess)
 
@@ -48,16 +48,17 @@ func main() {
 
 	active_ris, err := svc.DescribeReservedInstances(params)
 	if err != nil {
-		fmt.Println("Could not DescribeReservedInstances", err)
+		log.Println("Could not DescribeReservedInstances", err)
 	}
-	for _, ri := range active_ris.ReservedInstances {
+	for i, ri := range active_ris.ReservedInstances {
 		if isExpiring(ri, 365) {
-			// fmt.Println(ri)
+			// log.Println(ri)
 			q, err := addToQueue(sqs_svc, weekly_qURL, ri)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
-			fmt.Println(q)
+			log.Println(i)
+			log.Println(q)
 		}
 	}
 }
